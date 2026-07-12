@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SGS Framework Core、插件协议与运行时 API 用户手册">
+  <title>SGS Framework Manual</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <strong>SGS Framework</strong>
+      <span>Core 0.3.2</span>
+    </div>
+    <label class="search-field">
+      <span>搜索手册</span>
+      <input id="search" type="search" autocomplete="off" placeholder="API、事件、配置……">
+    </label>
+    <nav id="navigation" aria-label="手册章节">
+      <a href="#overview">概览与界面</a>
+      <a href="#install">安装与入口</a>
+      <a href="#core-api">Core API</a>
+      <a href="#plugin-format">插件定义</a>
+      <a href="#settings">插件配置</a>
+      <a href="#updates">更新检测</a>
+      <a href="#events">运行时事件</a>
+      <a href="#storage">存储</a>
+      <a href="#sources">插件源</a>
+      <a href="#built-ins">官方插件</a>
+      <a href="#risk">权限与边界</a>
+    </nav>
+    <a class="download-link" href="/script/download.mjs">安装下载器</a>
+  </aside>
+
+  <main>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">用户与插件开发手册</p>
+        <h1>SGS Framework</h1>
+      </div>
+      <div class="header-meta">
+        <span>Core 0.3.2</span>
+        <a href="/script/">文件目录</a>
+      </div>
+    </header>
+
+    <article id="manual-content">
+      <section id="overview" data-title="概览与界面 Core 开发者模式">
+        <h2>概览与界面</h2>
+        <p>SGS Framework 由下载器在 Laya 初始化前注入。工程源码按 Downloader、Core 与各插件项目分别维护，发布时统一合并、压缩和变量混淆；浏览器取得的 Downloader、Core 与每个插件各自都是一个完整 JavaScript 文件。Core 统一管理生命周期、运行时事件、可逆 Hook、插件安装与配置、LocalStorage 前缀、版本检测和 Laya 底层访问。</p>
+        <p>屏幕边缘的 SGS 悬浮窗自动吸附左侧或右侧。自动隐藏开启时，只保留边缘感应区，鼠标进入当前侧边缘才显示；拖动后在边缘松开也会按该设置隐藏。点击悬浮窗可选择“选项”、切换自动隐藏，并查看不可点击的 Core 版本号。</p>
+        <p>选项窗口默认占视口宽高各 50%，可拖动和从右下角缩放。最小宽高为视口的 20%，同时保留 260×180 像素的可用下限；移动、缩放、视口变化和浏览器缩放后，窗口都会被约束在屏幕内。</p>
+        <p>窗口包含“插件管理”“插件配置”“Core”三个 Tab。“插件管理”显示插件名称、版本、ID、简介和更新/启停/删除操作，不重复显示安装时已经确认的能力列表，也不附加独立的运行中/已禁用状态文字；启停开关本身仍负责控制插件。Core Tab 的“Core 版本”区域同时显示版本检测与“开发者模式”开关。开关成功保存后，公共字段会立即更新；已经运行的插件可以监听对应事件，后续启动的插件可以直接读取当前值。</p>
+        <figure>
+          <img src="./assets/framework-settings.png" alt="SGS Framework 插件配置窗口">
+          <figcaption>插件声明配置，Core 负责三个 Tab 的排版、状态与交互。</figcaption>
+        </figure>
+        <div class="facts">
+          <div><strong>全局入口</strong><code>window.SgsFramework</code></div>
+          <div><strong>官方源</strong><code>/script/plugin/index.json</code></div>
+          <div><strong>网络超时</strong><code>5000 ms / 请求</code></div>
+          <div><strong>发布形式</strong><code>一个入口一个 JavaScript</code></div>
+        </div>
+      </section>
+
+      <section id="install" data-title="安装与入口">
+        <h2>安装与入口</h2>
+        <ol>
+          <li>在油猴脚本管理器中打开 <a href="/script/download.mjs">download.mjs</a> 并安装；该地址是构建后的单文件油猴脚本，不是工程源码目录。</li>
+          <li>下载器在 <code>document-start</code> 安装 Laya 初始化屏障，优先请求本站 <code>core.mjs</code>，失败后请求 GitHub 当前存在的 <code>main/framework/core.mjs</code>；两个来源各自最多等待 5 秒。</li>
+          <li>远程请求都失败时，下载器先尝试页面 LocalStorage 缓存；仍不可用时显示“继续游戏 / 刷新重试”。选择继续时使用可用缓存，没有缓存则不加载 Framework。</li>
+          <li>Core 注入完成后释放 Laya 屏障，恢复已启用插件并执行静默版本检测。</li>
+        </ol>
+        <pre><code>用户手册：https://sgs.senrax.com/
+安装脚本：https://sgs.senrax.com/script/download.mjs
+公开目录：https://sgs.senrax.com/script/</code></pre>
+        <p>在 <code>https://web.sanguosha.com/login/index.html</code> 登录页，Core 会显示只读版本标记，便于确认注入是否成功。</p>
+        <p>开发工作区位于 <code>E:\ds-sgs\src</code>。<code>npm run build</code> 生成与公开目录同构的 <code>dist</code>，<code>npm run publish:check</code> 只比较 Oracle 文件，<code>npm run deploy</code> 才会构建并发布。</p>
+      </section>
+
+      <section id="core-api" data-title="Core API 暴露方法 developerMode 开发者模式">
+        <h2>Core API</h2>
+        <p><code>window.SgsFramework</code> 与 <code>window.__SgsFramework</code> 指向同一个实例。插件通过 <code>context.framework</code> 获得该实例；页面控制台也可以直接读取全局入口。</p>
+        <div class="api-table-wrap">
+          <table>
+            <thead><tr><th>入口</th><th>暴露方法与定义</th></tr></thead>
+            <tbody>
+              <tr><td>Core</td><td><code>developerMode</code> 是由 Core UI 控制的只读布尔字段，对应能力名 <code>core.developer-mode</code>；<code>status()</code> 返回版本、开发者模式、插件、Laya、事件监视、更新和 UI 状态；<code>addDisposer(fn,label)</code> 注册清理；<code>dispose(reason)</code> 停止插件并释放全部资源。</td></tr>
+              <tr><td><code>events</code></td><td><code>on(type,handler)</code>、<code>once</code>、<code>off</code>、<code>emit</code>、<code>clear</code>、<code>listenerCount</code>。<code>on/once</code> 返回取消函数。</td></tr>
+              <tr><td><code>logger</code></td><td><code>scope(name)</code> 创建作用域 Logger；<code>info</code>、<code>warn</code>、<code>error</code> 同时写控制台和 <code>log</code> 事件。</td></tr>
+              <tr><td><code>storage</code></td><td><code>scope(name)</code>、<code>get/set/remove</code>、<code>getJson/setJson</code>、<code>keys</code>。Core 负责真实 LocalStorage 前缀与 JSON 序列化。</td></tr>
+              <tr><td><code>timers</code></td><td><code>setTimeout(fn,ms,label)</code>、<code>setInterval(fn,ms,label)</code>，返回取消函数并参与 Core 热重载清理。</td></tr>
+              <tr><td><code>hooks</code></td><td><code>wrapMethod(owner,name,handler,{label})</code>。Handler 接收 <code>{original,args,thisArg,callOriginal}</code>；返回的取消函数恢复包装前方法。</td></tr>
+              <tr><td><code>dom</code></td><td><code>createOverlay</code>、<code>createPanel</code>、<code>createButton</code>、<code>toast</code>。创建结果包含元素与移除函数。</td></tr>
+              <tr><td><code>browser</code></td><td><code>openUrl</code>、<code>request</code>、<code>requestText</code>、<code>requestJson</code>、<code>requestHeaders</code>。请求默认不带凭据、禁用缓存并在 5 秒后中止。</td></tr>
+              <tr><td><code>laya</code></td><td><code>getLaya()</code>、<code>getStage()</code>、<code>status()</code>、<code>whenReady()</code>、<code>walk()</code>、<code>find()</code>、<code>snapshot()</code>。节点引用保持为原始 Laya 对象。</td></tr>
+              <tr><td><code>runtime</code></td><td><code>start()</code>、<code>stop()</code>、<code>poll()</code>、<code>status()</code>、<code>getBattle()</code>，封装战斗、窗口和公开日志生命周期。</td></tr>
+              <tr><td><code>plugins</code></td><td><code>inspect/addFromUrl/install</code>、<code>enable/disable/remove</code>、<code>checkOne/checkUpdates/update</code>、<code>settings/config/invokeAction/list</code>、插件源与孤儿配置管理方法。</td></tr>
+              <tr><td><code>update</code></td><td><code>check()</code>、<code>reload()</code>、<code>status()</code>；<code>reload</code> 执行当前页面 Core 热替换。</td></tr>
+              <tr><td><code>ui</code></td><td><code>mount()</code>、<code>openWindow(tab)</code>、<code>closeWindow()</code>、<code>selectTab()</code>、<code>refresh()</code>、<code>confirmAction()</code>、<code>toast()</code>、<code>status()</code>。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code>install(context) {
+  function applyDeveloperMode() {
+    if (context.framework.developerMode) {
+      // 创建或启用仅用于开发的行为。
+    } else {
+      // 关闭并清理仅用于开发的行为。
+    }
+  }
+
+  applyDeveloperMode();
+  context.addDisposer(
+    context.events.on("core:developer-mode-changed", applyDeveloperMode),
+    "developer-mode"
+  );
+}</code></pre>
+        <p>插件安装时先读取 <code>context.framework.developerMode</code>，可以获得 Core 启动时恢复的值。运行期间切换开关时，字段先更新，再触发事件；只在动作执行时判断的代码也可以直接读取字段，不需要缓存副本。</p>
+      </section>
+
+      <section id="plugin-format" data-title="插件定义 Header context lifecycle">
+        <h2>插件定义</h2>
+        <p>插件工程源码按项目放在 <code>E:\ds-sgs\src</code>，可以拆分为多个模块、数据文件和构建辅助代码。统一流水线用 esbuild 合并模块，再用 Terser 压缩与变量混淆。Core 面向的发布产物仍是一个可直接下载的经典 JavaScript 文件：文件开头保留 Header，正文调用 <code>SgsFramework.plugins.define()</code>，且不能依赖同项目的第二个 JavaScript 下载。</p>
+        <div class="api-table-wrap">
+          <table>
+            <thead><tr><th>Header</th><th>含义</th></tr></thead>
+            <tbody>
+              <tr><td><code>@id</code></td><td>稳定且唯一的插件 ID；更新包必须保持一致。</td></tr>
+              <tr><td><code>@name</code> / <code>@version</code></td><td>显示名称与可比较版本号。</td></tr>
+              <tr><td><code>@description</code></td><td>安装确认框和插件列表中的简介。</td></tr>
+              <tr><td><code>@permissions</code></td><td>逗号分隔的能力声明，仅披露，不构成沙箱。</td></tr>
+              <tr><td><code>@updateMode</code></td><td><code>default</code>、<code>header</code> 或 <code>api</code>，不区分大小写。</td></tr>
+              <tr><td><code>@versionHeader</code></td><td>Header 模式读取的响应头，默认 <code>x-sgs-plugin-version</code>。</td></tr>
+              <tr><td><code>@versionApi</code></td><td>API 模式 JSON 地址；相对地址按插件 URL 解析。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code>// ==SgsPlugin==
+// @id           example.plugin
+// @name         Example Plugin
+// @version      1.0.0
+// @description  Example description.
+// @permissions  core.events,browser.dom-overlay
+// @updateMode   default
+// ==/SgsPlugin==
+
+(() =&gt; {
+  SgsFramework.plugins.define({
+    id: "example.plugin",
+    manifest: {
+      name: "Example Plugin",
+      version: "1.0.0",
+      description: "Example description.",
+      permissions: ["core.events", "browser.dom-overlay"]
+    },
+    defaults: {},
+    settings: [],
+    install(context) {
+      const remove = context.events.on("battle:end", () =&gt; {});
+      context.addDisposer(remove, "battle-end");
+      return () =&gt; {};
+    }
+  });
+})();</code></pre>
+        <p><code>context</code> 提供 <code>framework</code>、<code>id</code>、<code>manifest</code>、<code>sourceUrl</code>、<code>events</code>、<code>logger</code>、<code>storage</code>、<code>config</code>、<code>timers</code>、<code>hooks</code>、<code>dom</code>、<code>browser</code>、<code>laya</code>、<code>runtime</code> 和 <code>addDisposer</code>。<code>install</code> 返回的函数也会在禁用、更新、删除或 Core 热替换时调用。</p>
+        <p>Header 在混淆前从入口文件提取并原样置于产物顶部，因此 Catalog 检查、首次安装确认和版本比较不需要理解混淆后的正文。公开文件使用既有 <code>.mjs</code> URL 保持更新兼容，但按经典脚本执行。</p>
+      </section>
+
+      <section id="settings" data-title="插件配置 Group Toggle Button TextBox Select DropdownList Custom defaults reset 自动签到">
+        <h2>插件配置</h2>
+        <p>插件声明配置分组、默认值和可选动作，Core 负责控件排版、保存、校验、错误提示与重置。每个插件可独立收起；没有配置项的插件显示“无可配置项”，也不显示重置按钮。</p>
+        <div class="api-table-wrap">
+          <table>
+            <thead><tr><th><code>type</code></th><th>值与触发行为</th></tr></thead>
+            <tbody>
+              <tr><td><code>toggle</code></td><td>保存布尔值；声明 <code>onChange</code> 时，在保存成功后调用对应动作。</td></tr>
+              <tr><td><code>button</code></td><td><code>action</code> / <code>onClick</code> 指向插件动作；插件未启动时不可用。</td></tr>
+              <tr><td><code>text</code></td><td>保存字符串；支持 <code>inputType</code>、数值范围、长度范围和多个正则 <code>patterns</code>。</td></tr>
+              <tr><td><code>select</code></td><td>按 <code>options: [{value,label}]</code> 显示下拉列表并保存选中值；可声明 <code>onChange</code>。</td></tr>
+              <tr><td><code>custom</code></td><td><code>render</code> / <code>action</code> 接收 Core 创建的 host；插件只拥有该 host 内部内容。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code>defaults: { enabled: true, mode: "safe" },
+settings: [{
+  id: "general",
+  name: "General",
+  items: [
+    { key: "enabled", name: "Enabled", type: "toggle", onChange: "apply" },
+    { key: "mode", name: "Mode", type: "select", options: [
+      { value: "safe", label: "Safe" },
+      { value: "full", label: "Full" }
+    ], onChange: "apply" }
+  ]
+}],
+actions: { apply(context, value, key) {} }</code></pre>
+        <p><code>context.config.get/set/reset/defaults</code> 与配置页共享同一状态。Core 先校验并序列化新值，再触发配置动作，因此动作读取 <code>context.config</code> 时已经是新值。首次安装没有历史配置或用户重置时，使用插件声明的 <code>defaults</code>。</p>
+        <p>AutoRewards 显示“领取周卡月卡、自动免费将池、自动免费祈福、自动官阶俸禄、自动签到、自动砍树”六个 Toggle。六项默认开启；免费常山战鼓没有独立开关，会在每次自动检查中处理。</p>
+        <p>AutoRewards 的“签到策略”下拉列表提供“不自动签到、自动签到-跳过试用、自动签到-跳过使用-月底领”。“自动签到”Toggle 是签到子系统总开关；下拉选择“不自动签到”也会停用整个签到子系统。“月底领”只在 +8 服务器日历的当月最后一天允许领取试用武将奖励，其他日期仍跳过。</p>
+        <p>Core Tab 的“开发者模式”是 Core 自身设置，不属于插件配置。切换它不修改任何插件的 <code>defaults</code>/<code>settings</code>；插件通过公共字段和 Core 事件决定开发专用行为。</p>
+      </section>
+
+      <section id="updates" data-title="更新检测 default header api HEAD 热重载">
+        <h2>更新检测</h2>
+        <div class="api-table-wrap">
+          <table>
+            <thead><tr><th>模式</th><th>请求与版本来源</th></tr></thead>
+            <tbody>
+              <tr><td><code>default</code></td><td>GET 插件 JavaScript，读取响应体并解析 Header 的 <code>@version</code>。</td></tr>
+              <tr><td><code>header</code></td><td>通过 Fetch 发送 HEAD，不读取响应体；读取 <code>@versionHeader</code> 指定的响应头。</td></tr>
+              <tr><td><code>api</code></td><td>GET <code>@versionApi</code> JSON；必须提供 <code>version</code>，可提供本次下载使用的 <code>url</code>。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Core 恢复插件后自动检测插件版本，同时检测自身版本。检测对象始终是 <code>dist</code> 发布的单文件产物，而不是工程目录中的模块。Core 版本来自混淆后仍保留的 <code>SgsCore @version</code> Header，不解析压缩正文中的变量声明；首个 Header 版本同时保留注释形式的兼容标记，使已安装的旧 Downloader/Core 也能识别并升级。插件管理页提供手动检测按钮；远程版本更高时，插件行显示更新按钮。Core 页显示当前/远程版本，并在有更新时显示热重载按钮。</p>
+        <p>插件更新会保存新源码、停止旧实例、执行新定义并恢复原启用状态。Core 热重载会释放旧 Core 的插件、Hook、定时器、监听器和 DOM，再由新 Core 从缓存源码恢复已启用插件。</p>
+        <p>跨域来源必须允许当前游戏页面读取响应。Header 模式若使用自定义响应头，还要通过 <code>Access-Control-Expose-Headers</code> 暴露该名称。</p>
+      </section>
+
+      <section id="events" data-title="运行时事件 developer mode battle window log Laya">
+        <h2>运行时事件</h2>
+        <div class="api-table-wrap">
+          <table>
+            <thead><tr><th>事件</th><th>触发证据与 Payload</th></tr></thead>
+            <tbody>
+              <tr><td><code>framework:ready</code></td><td>Core 服务和 UI 已发布；Payload 为 <code>status()</code> 快照。</td></tr>
+              <tr><td><code>core:developer-mode-changed</code></td><td>用户成功切换开发者模式后触发；Payload 为 <code>{ enabled, previous }</code>。事件处理器执行时，<code>framework.developerMode</code> 已经是 <code>enabled</code>。</td></tr>
+              <tr><td><code>battle:start</code></td><td>有效可见的 <code>TableGameScene</code>/<code>RogueLikeGameScene</code> 且 <code>manager.seats</code> 存在；提供 <code>scene</code>、<code>manager</code>、<code>sceneName</code>、<code>startedAt</code>。</td></tr>
+              <tr><td><code>battle:end</code></td><td>Scene 离开、失去有效可见性、seats 消失或被替换；提供原 Scene/Manager、原因和结束时间。</td></tr>
+              <tr><td><code>battle:log</code></td><td>来自公开 Laya HTML 战斗日志容器；提供 <code>html</code>、纯文本、节点和 Scene。</td></tr>
+              <tr><td><code>window:open</code></td><td>Stage 中有效可见的 Window/Dialog/Popup 节点出现；提供稳定对象 ID、原始节点和节点信息。</td></tr>
+              <tr><td><code>window:close</code></td><td>此前可见窗口离开集合；提供同一对象 ID、原始节点和关闭时间。</td></tr>
+              <tr><td>插件事件</td><td><code>plugin:installed/removed/started/stopped/updated</code>、<code>plugin:config-changed</code>、<code>plugin:config-reset</code>。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Core 启动时从存储恢复开发者模式，并在恢复插件前公开该字段；启动恢复本身不触发变更事件。插件应在安装时读取一次字段，并在需要持续响应时注册 <code>core:developer-mode-changed</code>，同时把取消函数交给插件清理流程。</p>
+        <p>有效可见性会检查节点及父链的 <code>visible</code>、<code>alpha</code>、<code>scaleX/scaleY</code> 和 <code>destroyed</code>。Core 不通过 <code>console.log</code> 判断战斗，也不把可能残留的窗口注册表当作事实。</p>
+        <p>高层事件不足时，可从 <code>framework.laya.getLaya()</code>、<code>getStage()</code> 或事件 Payload 取得原始 Laya 对象并调用底层公开接口。</p>
+      </section>
+
+      <section id="storage" data-title="LocalStorage 前缀 序列化 清理配置">
+        <h2>存储</h2>
+        <pre><code>sgs.framework.core.developer-mode
+sgs.framework.ui.dock
+sgs.framework.ui.window
+sgs.framework.plugins.registry
+sgs.framework.plugins.sources
+sgs.framework.plugins.catalog-cache
+sgs.framework.plugins.&lt;pluginId&gt;.code
+sgs.framework.plugins.&lt;pluginId&gt;.config
+sgs.framework.plugins.&lt;pluginId&gt;.data.*</code></pre>
+        <p><code>sgs.framework.core.developer-mode</code> 保存 Core 开发者模式，缺失时按 <code>false</code> 处理。Core 启动时先读取该键，再创建插件上下文；切换时先写入该键，保存成功后才更新公共字段与发送变更事件。写入失败时字段保持原值，Toggle 恢复原状态并显示错误提示。</p>
+        <p><code>context.config</code> 保存插件声明的配置对象；<code>context.storage</code> 保存插件自己的内部数据。插件只传相对键，Core 自动添加 <code>plugins.&lt;pluginId&gt;</code> 前缀并负责字符串或 JSON 序列化。Core 的停靠位置与窗口几何信息由 <code>sgs.framework.ui.*</code> 独立保存。</p>
+        <p>Core 启动时把历史双分隔符键（例如 <code>ui..dock</code>、<code>data..runtime-source</code>）迁移为单点键；如果单点键已经存在，以单点键为准。</p>
+        <p>删除插件会删除注册记录和源码缓存，但保留 <code>.config</code> 与 <code>.data.*</code>。Core 页的“检查已删除插件配置”按插件 ID 汇总这些孤儿键、数量和字符数；用户确认删除时只移除该插件的配置/数据，不影响已安装或被禁用插件。</p>
+      </section>
+
+      <section id="sources" data-title="官方源 AutoRewards DebugTools Game Model Blocker 第三方源 Catalog">
+        <h2>插件源</h2>
+        <p>插件管理页按来源分组，每个官方、第三方或手动来源都可收起。固定官方源 <code>/script/plugin/index.json</code> 只引用构建后的单文件产物，发布 SGS Game Model、SGS Blocker、SGS DebugTools 与 SGS AutoRewards。Game Model 为使旧记牌器原位升级，继续使用稳定 ID <code>sgs.card-tracker</code>；DebugTools 继续使用 <code>sgs.automation</code>，AutoRewards 使用 <code>sgs.auto-rewards</code>。</p>
+        <pre><code>{
+  "name": "Source name",
+  "plugins": [
+    { "id": "example.plugin", "url": "https://example/plugin.js" }
+  ]
+}</code></pre>
+        <p>第三方源可添加名称与 Catalog URL，并支持禁用、重命名和删除；删除来源不删除已经安装的插件。从 URL 安装时，Core 先下载并解析 Header，显示名称、版本、简介、来源 URL 和完整能力列表，用户确认后才执行代码。安装后的管理列表不重复能力标签或独立运行状态，只保留启停操作和需要处理的错误。Catalog 的 ID 与插件 Header/定义不一致时，安装校验失败。</p>
+      </section>
+
+      <section id="built-ins" data-title="官方插件 Game Model 推理模型 牌堆 弃牌堆 手牌 概率 技能研究 AutoRewards DebugTools 山河图 武将试炼 角色信息 每日任务 月卡 周卡 银两 累计奖励 免费将池 祈福 擂鼓 常山战鼓 官阶 签到 试用武将 发财树 屏蔽">
+        <h2>官方插件</h2>
+        <p>官方源提供 SGS Game Model、SGS Blocker、SGS DebugTools 与 SGS AutoRewards。它们使用普通插件相同的安装、启用、禁用、更新和删除流程；停止时释放所属 Hook、定时器、离屏对象、等待任务和可调用服务。</p>
+
+        <h3>SGS Game Model</h3>
+        <p>无配置项。插件 ID 仍为 <code>sgs.card-tracker</code>，发布文件 <code>card-tracker.mjs</code> 内嵌 gzip 压缩的完整 Game Model runtime，启用时才通过 Chrome 原生 <code>DecompressionStream</code> 解压并执行，不再下载或缓存第二个 <code>card-tracker-runtime.js</code>。它是无 UI、只读的牌局事实与推理核心：不创建 Overlay、旧侧栏、DOM 面板、Laya 节点、按钮或牌面描画。它只在有效可见的 <code>TableGameScene</code> 中同步服务器协议、牌堆数量、所有座位、公开区与可证明的运行时事实；离开牌局、更换 manager 或收到新开局协议时会建立全新 session，上一局的牌、顺序、弃牌和约束不会泄漏。</p>
+        <div class="api-table-wrap"><table>
+          <thead><tr><th>模型能力</th><th>当前行为</th></tr></thead>
+          <tbody>
+            <tr><td>物理牌堆</td><td>按模式使用物理 CardID 集合。当前排位规则 22 使用标准 1 至 160；具有 <code>PlayCardPile.List</code> 的模式使用已证明的显式列表。无法证明模式牌堆时保持 unresolved，绝不把 2786 张全量卡表当作本局牌堆。</td></tr>
+            <tr><td>独立实体牌堆</td><td>技能自有、仍由真实 CardID 组成的有序牌堆使用规则作用域 key 和 <code>physical-pile:&lt;key&gt;</code> 区域单独建模，保存成员、顶/底、可见性、独立 epoch、回收策略与历史。<code>takeFromPhysicalPile</code>/<code>putIntoPhysicalPile</code> 产生正常的实体位置和手牌事实；<code>shufflePhysicalPile</code> 只清除该堆顺序并推进该堆 epoch，绝不会触发主牌堆耗尽、合并主弃牌堆或改变主牌堆概率。只有完整成员已证明时，洗牌后的 <code>physicalPileNextProbability</code> 才使用均匀分布；成员不完整则拒绝猜测。它与 ID 根本不是游戏牌的 <code>entityPiles</code> 分离。</td></tr>
+            <tr><td>耗尽与回收</td><td>牌离开后若牌堆恰好为 0，会立刻以当时仍在弃牌堆的牌建立下一 epoch；处理区中的牌不参加。一次多张取牌可保留旧牌堆前缀并跨 epoch 继续。纯“洗当前牌堆”只清除顺序，不会擅自合并弃牌堆。</td></tr>
+            <tr><td>顺序与区域</td><td>同时维护连续的已知顶/底和稀疏 <code>knownRanks</code>，支持已知实体牌插入第 N 位、窗口分顶底、公开翻牌直到命中及不足时落底。协议位置常量优先于 Taxonomy 提示；特殊区、处理区与移出游戏区保留 <code>zoneParam</code>，牌堆内重排不改变物理数量。</td></tr>
+            <tr><td>武将牌命名牌堆</td><td>“田”“米”“锋”“笔”等武将牌上真实 CardID 不再合并成 <code>general:&lt;seat&gt;</code>。<code>observeNamedCardZone</code> 为每堆保存 zoneKind、pileKey、SkillID/规则身份或 zoneParam、承载座位/武将区、控制者与放置者、明确的无所有者语义、顺序、正反面、可见受众、授权观察席及逐牌显示状态；<code>ownershipKnown</code> 与 <code>orderKnown</code> 把“已证明无所有者/有顺序”同“尚无证据”分开。<code>hostPlayerKey/hostAvatarKey/lifecycleScope</code> 再区分当前武将附属堆与跨武将的玩家级保留区：同一玩家更换下一名武将时可更新 avatar 描述而保持同一物理堆。实时采集直接保留当前 H5 <code>skillOutSideCardDict</code> 的技能/ToZoneParam 数字 key。正 CardID 直接证明实体；仅有 <code>CardId=0</code> 时必须按审阅后的 SkillID 区分“隐藏实体牌数量”“无实体标记/状态”与“尚未判明”，只有第一类进入物理牌世界，后两类作为规则状态保存，绝不虚增牌数或污染概率。数字移出区 key 与协议 <code>removed:&lt;seat&gt;:&lt;zoneParam&gt;</code> 合并为同一区域，快照不会再覆盖协议精确位置。木牛等装备附属堆另存宿主 CardID、容量和跟随策略；宿主装备移动不会凭规则文本自动搬堆，只有权威宿主变更才由 <code>rehostNamedCardZone</code> 原子更新区域并保留前后历史。<code>visibleZone</code> 对未授权观察者只返回数量，不泄漏本地已知 CardID；后续观看只精化观察权限。牌进入判定处理、手牌、弃牌或移出区时移动同一 CardID 并清除旧堆显示状态。它与技能独立牌堆 <code>physicalPiles</code>、非游戏牌实体堆 <code>entityPiles</code> 均分离。</td></tr>
+            <tr><td>区域能力</td><td>装备栏位、判定区等是否可用/禁用/废除由 <code>zoneCapabilities</code> 单独保存，含座位、区域、栏位、能力、永久性与来源；它不会自动移动区域内现有牌。虚拟八阵/蛮甲等只建立能力或修正规则，不生成装备 CardID；“先移走装备再废除栏位”的两步也不会被压成一个模糊状态。</td></tr>
+            <tr><td>装备投影</td><td><code>equipmentProjections</code> 强制区分两类：<code>physical-effective-identity</code> 把一个已经位于装备区的真实 CardID 映射成当前生效的舰船/专属装备身份，源牌仍是唯一物理实体且离开绑定区域即失效；<code>virtual-equipment</code> 没有 CardID，默认也不占物理栏位。两类均保存宿主、槽位、可见性、来源和技能生命周期，并固定 <code>createsPhysicalCard=false</code>，因此不会把原装备、生成装备和“视为装备”复制成多张牌。</td></tr>
+            <tr><td>玩家手牌</td><td>所有座位都保存具体已知牌、属性约束与未知数量。客户端实际收到的敌方 CardID 会保留，并区分自己、规则授权、公开与原始服务器暴露来源；服务器未提供的身份不会被臆造。“无红桃”等约束绑定物理手牌代次，真正进出牌才使其失效；原地展示或授权观看只精化 CardID 知识，不推进代次、不伪造移动，并会用新身份复核旧约束。<code>handKnowledgeHistory</code> 与物理 <code>handHistory</code> 分开保存。数量转移账本即使 CardID 全部隐藏，也能记录最后手牌失去与首次获得；整手牌交换让双方各自只产生一次交换前到交换后的迁移，不制造临时空手。</td></tr>
+            <tr><td>原子整区交换</td><td><code>exchangeZones</code> 同时快照并交换两个非牌堆区域的完整内容，使用共同的 <code>atomicOperationId</code> 写入 <code>zoneExchangeHistory</code>。双方同为三张未知牌时，虽然交换前后知识外观一致，手牌代次仍会推进，旧属性约束仍会失效；已知 CardID 保留真实移动/驻留历史，位置不确定组的区域与配额按双射重映射。牌堆、弃牌堆和洗牌暂存区具有端点、epoch 与回收规则，不允许走该通用操作。</td></tr>
+            <tr><td>位置不确定组</td><td>从完整已知区域暗转一张牌时，不会把整组 CardID 重新视为可能在牌堆。模型保存“这些实体牌分布在若干区域并集”的守恒事实及已知分区数量；后续暗转扩大可能区域，公开实体会逐张解析，完整区域快照可排除该区域。只要所有可能区域都在牌堆外，整组牌仍从下一张概率中排除。若不确定性触及牌堆，只有同时证明牌堆配额和均匀/可交换选择时才计算：下一张按组配额求边际，检索概率按各组超几何分布卷积；选择分布未知时直接报告概率不可用，不擅自假设均匀。</td></tr>
+            <tr><td>弃牌与历史</td><td>当前弃牌堆成员与不可变的入堆历史分开保存；可查询“本回合进入且此刻仍在弃牌堆”的牌。区域事实与移动原因也分开：进入弃牌堆不等于被“弃置”。已验证的 <code>movementReason</code>、原因标签和原始 <code>moveType</code> 都会保留，但不会根据未证明的协议数值猜测语义。耗尽回收清空当前成员但保留历史；纯当前牌堆洗牌不清空弃牌堆。</td></tr>
+            <tr><td>连续状态与事件</td><td>每个已知实体牌保存连续区域驻留区间，以及移动、用牌、响应、抵消等事件账本。<code>cardLocationAt</code> 可按历史 eventIndex 或时间查询精确区域；若查询点正好是一次移动边界，<code>moment=before</code> 返回来源区，<code>moment=after</code> 返回目的区，不依赖内部日志插入顺序。同一 CardID 在同一粗粒度时间戳连续移动时，before 表示该时间点第一步之前，after 表示最后一步之后。已知移动会记录来源区、去向区、协议、回合与 <code>gained-from-deck</code>/<code>entered-discard</code> 等标签；整批离装等操作另有 <code>movementGroupId</code>、批次 <code>sequenceIndex</code> 及逐 CardID 来源/目标栏位，既保留完整批次，也保留逐装备离区触发顺序。“尝试弃置/移动”另存 pending、prevented、accepted、failed、cancelled、moved 状态；被防止时实体仍留原区，只有独立权威移动才把 <code>movementApplied</code> 置真并关联 movement ID。模型可以证明“从交付时起始终留在手牌”，并把“离开后返回”识别为新驻留；<code>queryCurrentDiscard</code> 会把事件条件与此刻弃牌堆成员显式相交。非单牌状态使用完整规则身份命名的 scalar/counter/set/ordered-list 账本，有序列表会保留重复项和顺序。</td></tr>
+            <tr><td>布尔总数约束</td><td>服务器只返回“若干猜测中答对 N 项”时，<code>observeBooleanConstraint</code> 保存每个命题、提交的期望真假、逐事实权威来源及精确/上下界总数；非法布尔值/计数直接拒绝，不会静默变成 false 或无约束。小规模集合枚举所有满足赋值，只有全部解一致时才产生单项 <code>derivedValue/entailedFacts</code>；大规模集合只做可靠的上下界传播。<code>hand-any</code> 只接受同 generation 的已知匹配 CardID、现有手牌约束或完整身份快照证明“不存在”，不完整隐藏手牌绝不产生负事实；仅观看会重算而不换代。无解时不导出推论。绑定目标手牌 generation 的约束在第一次成员变化时失效，晚到的旧代结果从建立时即不活动，但历史继续保留。</td></tr>
+            <tr><td>未来时点效果</td><td>“下一结束阶段”“本回合结束时”“下个回合获得”等承诺进入独立 <code>scheduledEffects</code> 账本。每条保存精确事件/回合/阶段/座位触发条件、待发生效果、SkillID、规则身份与因果来源；匹配服务器事件后只由 pending 变为 due，不会自行摸牌、移动或结算。后续必须依据服务器结果显式 resolved/cancelled/expired。绑定实体装备区域或 <code>whileSkillBindingKey</code> 的预约会在实体离区或技能失去时失效，全部变化保留在 <code>scheduledEffectHistory</code>。</td></tr>
+            <tr><td>候选集与选择</td><td>服务器给出的随机锦囊候选、声明牌名、花色、点数、座位、技能或普通分支进入独立 <code>choiceSets</code> 账本，并强制保存 domain、顺序、完整性、选择上下限、可见范围、规则身份、来源与生命周期。<code>effective-card-identity</code> 中的数字只是牌身份/SkillID 候选，绝不进入牌堆；即使 domain 为 <code>physical-card-id</code>，候选也只是实体引用。<code>resolveChoiceSet</code> 仅记录被选索引和结果并固定 <code>movementApplied=false</code>，必须等独立服务器移动包才改变实体位置。低权威候选改写会被拒绝，阶段/回合/技能失效及所有结果进入 <code>choiceSetHistory</code>。</td></tr>
+            <tr><td>服务器随机结果</td><td><code>selectionAgency=server-random</code> 将随机结果与玩家选择分开；<code>observeStochasticEvent</code> 保存采样模型、候选权重、完整或仅谓词约束的总体、可能来源区（可为 <code>unresolved</code>）、来源是否已解明、观察席可见性与生命周期。“随机获得一张牌”可以在没有候选 CardID、没有来源区时保持 pending。<code>stochasticProbability</code> 只在候选总体完整且均匀/加权/确定性算法已明确时返回“下一次选择”的边际概率；unknown 绝不默认均匀，多结果的包含概率也不会由单抽边际伪造。<code>resolveStochasticEvent</code> 可记录服务器结果 CardID，但仍固定 <code>movementApplied=false</code>；之后必须用独立移动包证明来源并改变区域，获得后自动装备/使用则作为后续因果子事件。</td></tr>
+            <tr><td>规则修正账本</td><td>不移动牌但会改变合法目标、响应张数、伤害、次数/手牌上限或有效牌身份的规则，保存为身份化的 <code>kind + subject + selector + effect</code>。核心只接受已解析修正，不解释中文技能名；修正可分别绑定父 <code>eventId</code>、逐目标 <code>targetEventId</code>、<code>targetSeat</code>、通道或具体装备 CardID。同一父牌对目标1的“不可响应/伤害+1”不会泄漏到目标2；目标效果结算只清理该目标，父牌结算再清理其余子修正。其余修正按回合、阶段、游戏结束、实体离区或实体代次终止失效，所有注册、更新和失效保留历史。</td></tr>
+            <tr><td>技能绑定账本</td><td>基础、动态授予、使命派生、替换及失去的技能，都以精确 SkillID 绑定实际座位、武将、模式或显式实例；保存规则身份、资源版本、派生父技能和授予事件。相同中文名绝不合并，替换只移除协议明确列出的旧 SkillID。仅存在于配置或旧客户端类表、但本局未观察到绑定的历史技能不会自动生效；明确声明 <code>whileSkillBindingKey</code> 的状态/修正会随技能失去而失效，全部变化进入 <code>skillBindingHistory</code>。</td></tr>
+            <tr><td>结算因果图</td><td>主牌使用、逐目标效果、响应/抵消、插入的新用牌、伤害/回复与伤害来源替换按稳定事件 ID 建立父子和因果关系；角色字段区分 user、caster、responder、damageSource 与 target。当前精确目标集合以 useId 作用域的有序规则状态保存，append/remove 不会抹掉父事件已观察过的历史目标；逐目标子事件分别记录目标被移除、仍为目标但效果无效、响应及结算。额外结算是在同一父 useId 下新增有序效果子事件，不复制父实体或材料。重复协议只补充同一节点并保留观察历史，冲突写入 contradiction。这样可表达南蛮/万箭逐目标结算、决斗多轮响应、目标增减、效果无效及祸首改伤害来源，而不会把“没有响应”误判为敌方没有对应手牌。</td></tr>
+            <tr><td>拼点账本</td><td>拼点另存一组规范化事实：一个发起方、按顺序排列的各对手、公开实体 CardID、印刷点数、实际有效点数、逐对手胜负与结算阶段。多目标拼点只共享一张发起方实体牌，不会复制 CardID；牌在结果窗口仍按协议留在处理区，账本不会提前弃置。<code>swapComparisonAssignments</code> 表示亮牌前交换两张已提交实体的参与者归属，只交换逻辑 assignment 与随牌点数，不把它伪造成双方手牌移动，亮牌/出结果后拒绝再换。点数可能被技能修改时不以印刷点数擅自重算胜负。</td></tr>
+            <tr><td>实体与虚拟身份</td><td>卡牌行动明确区分实体牌、零子牌虚拟牌和单/多子牌转化牌，并分别保存声明、验明、最终有效身份、真实材料牌、额外成本牌、只用于花色/数量/合法性判断而不移动的参照牌、提供者与有效使用者。服务器新生成但不在初始牌堆清单中的真实 CardID，可用 <code>observePhysicalCardDefinition</code> 登记其权威牌名、花色、点数和类型；对象型协议牌只把该包真实携带的字段保存为独立 <code>protocolDefinition</code>，配置补齐的显示字段不会倒灌成服务器证据，纯 CardID 包也不会推造或重复登记牌面。定义先于同包移动入模；它进入动态物理总体，实际进入弃牌堆后也可参加后续耗尽回收。低权威技能文本不能覆盖服务器牌面，临时转化则只写有效属性层。虚拟逻辑 token 永远不会进入物理 CardID 集合；展示只增加已知身份而不移动，重铸也不会被当作用牌。后续规则引用“此牌”时，可由 <code>cardActionMaterials</code> 查询父行动对应的主实体/子牌组当前所在；<code>moveCardActionMaterials</code> 只有在全部对应实体仍被证明位于同一来源区时才整体移动，其中一张已被其他效果取得便拒绝，绝不按牌名补造或复制。额外成本和参照牌默认不属于移动组。</td></tr>
+            <tr><td>印刷、有效与表观牌面</td><td>固定配置/服务器实体定义是 printed；判定改色、转化等实际参与合法性与结算的是 effective；猜测流程中只对指定观察者伪装的牌名是 apparent。非全局视图显式绑定 scope、父 use/effect、目标座位、通道、observer、候选集或技能生命周期；无上下文的 <code>effectiveCard(cardId)</code> 只叠加全局视图，目标1的“杀视为决斗”不会泄漏到目标2。<code>whileCausalEventId</code> 会在该逐目标效果结算时单独失效。<code>apparentCard</code> 只向指定观察者叠加表观牌面，而 <code>effectiveCard</code> 永远忽略 apparent 视图。因此伪装不会改写 CardID、印刷牌名、伤害/合法性或牌堆概率。视图可随移动、阶段/回合、事件、技能失去、显式清除、绑定候选集或因果效果结算失效，历史保留在 <code>cardViewHistory</code>。</td></tr>
+            <tr><td>非游戏牌实体域</td><td>武将牌堆、候选武将区等使用独立的 <code>entityPiles</code>、<code>entityLocations</code> 与不可变移动历史。已安装在玩家主将/副将栏位的武将牌另用 <code>GeneralCardEntity</code> 保存 GeneralID、栏位、明暗置、印刷/当前技能与观察权限；未授权查询会隐藏身份。印刷技能不会自动视为当前有效，仍须独立技能绑定证据。即使武将 ID 与 CardID 数值相同，也绝不会改变物理牌堆数量、顶底顺序、弃牌堆或概率总体。</td></tr>
+            <tr><td>概率与检索</td><td>输出下一张 CardID、牌名、13 点数、4 花色、3 类型和 2 颜色的完整概率，并保留完整超几何命中尾部。检索成功张数与公开 CardID 数分开记录：只知道成功 1 张时先移动一张未知匹配牌，再推导短取负证据；该次移牌若触发回收，旧 epoch 的负证据不会污染新牌堆。多结果检索跨越耗尽点时必须提供逐 epoch 的明确分段：旧牌堆最后结果先离开、当时弃牌立即回收、剩余结果和短取证据才进入新 epoch；未分段的跨 epoch 批次在任何变更前拒绝，分段中途冲突则整体回滚。牌堆+弃牌堆等联合来源由只读查询分别报告候选；后续结果只有在来源由 CardID 位置或协议明确证明时才移动，来源不明就拒绝变更。联合失败永远不会被改写成牌堆单源负证据。所有负证据均经过幂等与物理容量检查。</td></tr>
+            <tr><td>端点首个匹配</td><td><code>orderedMatchSearch</code> 表示从牌顶或牌底取得第一张匹配牌、但所有跳过的不匹配牌仍留在原牌堆。若 CardID 的第 N 位可由顶/底或稀疏位置证明，只移除该实体并平移后续位置；位置未知时保守清除不能继续证明的稀疏顺序，不虚构扫描长度。它与“逐张亮出并移动”的 <code>revealUntilResult</code> 是两个不同操作。</td></tr>
+            <tr><td>重铸时序</td><td><code>recast</code> 不是用牌：先把来源已证明的实体成本以 <code>recast</code> 原因移入弃牌堆，再从牌堆顶摸指定张数，两步属于同一因果事务。若摸牌恰好取走旧牌堆最后一张，刚重铸的成本此时已经在当前弃牌堆，因此会正确进入立即洗牌；模型不会把“先摸后弃”的错误顺序漏掉这批实体。</td></tr>
+            <tr><td>判定结果层</td><td>判定实体、有效花色/点数与“判定成功”是三个独立层次。<code>observeJudgementOutcome</code> 保存基础成功值，<code>invertJudgementOutcome</code> 以唯一 layerId 追加成功/失败反转，不改 CardID、区域或牌面；重复收到同一层不会二次反转。所有层的奇偶性得到本地派生结果，服务器最终结果另存并优先成为 finalSuccess，因此版本差异可审计。该机制表达“判定结果反转”，不能误写成改判、换牌或改花色。</td></tr>
+            <tr><td>实体牌生命周期</td><td>霹雳车、宝梳、大舰等专属实体使用逐 CardID 生命周期，不与普通移出区混淆。<code>destroyPhysicalCard/observePhysicalCardLifecycle</code> 把同一实体移入类型化终端区，标记不可回收，从下一张牌概率与弃牌堆洗牌候选中排除，同时保留原移动和生命周期历史；不会复制一张“销毁后的装备”。终端区不计入活动牌世界分配，但仍可查询。重新供应必须有足够权威、显式允许及具体目的区，否则拒绝；成功时保留协议 CardID 并推进 <code>physical generation</code>。旧代实体标签、有效/表观牌面、装备投影、绑定修正和预约效果全部到期，历史父牌材料也不能移动新代同号实体；<code>physicalCardGeneration</code> 可直接查询当前代次。</td></tr>
+            <tr><td>谓词、标签与操作</td><td>单牌谓词支持 <code>all/any/not</code>、点数/花色/类型/有效伤害属性，以及由当前配置推导的伤害牌、延时/普通锦囊、Spell Class 和装备副类型；点数和子集由独立接口只判断必定/可能/不可能，不伪造服务器采样概率。实体标签可按物理牌永久、回合、轮次、阶段、指定事件或留在某区域期间生效，失效后进入历史；印刷牌面与临时有效属性分开保存。判定代替、判定交换、已知实体牌原子互换和整区同时交换是四种不同操作；前者涉及牌堆末牌时抑制中间态假回收，后者抑制中间态假空手。<code>applyOperation</code> 只执行已解析的具体操作，未解析序列整体回滚。</td></tr>
+<tr><td>技能知识</td><td>3027 条用户基线与 3031 条当前目录分开记录，当前有 395 个分类签名、1835 条稳定语义审阅，<code>p1-no-card-suspect</code> 与 <code>p2-identity-semantics</code> 队列均已逐条审阅完毕，<code>p3-generic-movement</code> 仍剩 621 条。当前验证出的 raw <code>cha_spell</code> 缺口为 SkillID 3973、7111。每条生成记录都另存当前目录可取得的原始 owner 与全部 <code>cha_spellextend</code> 行，人工语义摘要不能覆盖 mode、difficulty、<code>par1</code> 等证据。若当前角色绑定与生成目录/H5 类存在、但 raw <code>cha_spell</code> 确实缺行，批次必须显式写入 <code>rawChaSpellAbsenceVerified</code> 与 <code>current-config-gap</code> 来源；校验结果单列缺口 ID，不能伪造配置行，也不能用 legacy profile 冒充 current。规则身份由 SkillID、产品/配置路径、当前目录 SHA-256 指纹、人工核对后的 owner 或 mode、sourceType 组成；不按中文名合并。目录加载、语义研究、可执行规则与运行时证据分别计数，Taxonomy 只用于研究排队。</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>const runtime = window.__SgsScripts;
+runtime.manager.update();
+const model = runtime.tracker.gameModel;
+const state = model.snapshot();
+const next = model.nextCardProbability({ endpoint: "top" });
+model.recast({ eventId: "recast:&lt;protocol-id&gt;", actorSeat: 0, from: "hand:0", cardIds: [72], drawnCardIds: [91] });
+model.orderedMatchSearch({ endpoint: "top", predicate: { color: "red" }, foundCount: 1, foundCardIds: [72], to: "hand:0" });
+model.takeFromDeckAtRank({ cardId: 72, rank: 3, to: "hand:0" });
+const discard = model.discardForTurn(4, 2);
+const checkpoint = model.observeGameEvent({ type: "game:turn", turn: 4, round: 2 });
+model.cardResidence(72);
+model.cardLocationAt({ cardId: 72, eventIndex: movement.eventIndex, moment: "before" });
+model.cardsContinuouslyInZone({ zoneKey: "hand:0", sinceEventIndex: checkpoint.eventIndex });
+model.handTransitions({ seatIndex: 1, turn: 4, lostLastHand: true });
+model.handKnowledgeChanges({ seatIndex: 1, knowledgeOnly: true });
+model.exchangeZones({ leftZone: "hand:0", rightZone: "hand:1", atomicOperationId: "whole-hand:1" });
+model.zoneExchanges({ atomicOperationId: "whole-hand:1" });
+model.cardEvents({ cardId: 72, turn: 4, movementReason: "discard", moveType: 17, tags: ["discard-phase"] });
+model.observeCausalEvent({ eventId: "response:&lt;protocol-id&gt;", eventType: "card:respond", parentEventId: "target-effect:&lt;protocol-id&gt;", roles: { responderSeat: 1 }, cardId: 72 });
+model.queryCausalEvents({ rootEventId: "use:&lt;protocol-id&gt;" });
+model.causalLineage("response:&lt;protocol-id&gt;");
+model.observeCardAction({ eventId: "use:&lt;protocol-id&gt;", action: "use", identityKind: "virtual-with-subcards", subcards: [{ cardId: 72, fromZone: "hand:1", role: "material" }], effectiveIdentity: { name: "杀" }, providerSeat: 1, effectiveUserSeat: 0 });
+model.queryCardActions({ identityKind: "virtual-with-subcards", effectiveName: "杀" });
+model.cardActionMaterials("use:&lt;protocol-id&gt;", { zone: "discard" });
+model.moveCardActionMaterials({ eventId: "use:&lt;protocol-id&gt;", from: "discard", to: "hand:0" });
+model.observeComparison({ comparisonId: "pindian:&lt;protocol-id&gt;", kind: "pindian", initiator: { seat: 0, cardId: 72 }, opponents: [{ seat: 1, cardId: 91 }], status: "chosen" });
+model.swapComparisonAssignments({ comparisonId: "pindian:&lt;protocol-id&gt;", opponentSeat: 1 });
+model.queryComparisons({ kind: "pindian", seat: 1 });
+model.queryCurrentDiscard({ eventAny: [{ turn: 4, tag: "used" }, { turn: 4, tag: "offset" }], movementReasons: ["card-use", "card-response"] });
+model.queryCardSources({ zones: ["deck", "discard"], predicate: { name: "无中生有" } });
+model.resolveCardSourceResult({ zones: ["deck", "discard"], predicate: { name: "无中生有" }, foundCount: 1, foundCardIds: [72], to: "hand:0" });
+model.observeEntityPile({ key: "character-deck:mode:&lt;id&gt;", entityType: "general", count: 3, entityIds: [1001, 1002, 1003], complete: true });
+model.moveEntityPile({ entityType: "general", from: "character-deck:mode:&lt;id&gt;", to: "general-zone:seat:0", count: 1, entityIds: [1001] });
+model.observeLocationGroup({ cardIds: [72, 91, 98], zoneKeys: ["hand:0", "hand:1"], zoneCounts: { "hand:0": 2, "hand:1": 1 } });
+model.activeLocationGroups({ cardId: 72 });
+model.updateRuleState({ key: "rule:&lt;identity&gt;:used-names", kind: "ordered-list", operation: "append", value: "杀", lifecycle: "turn" });
+model.registerRuleModifier({ key: "rule:&lt;identity&gt;:weapon:&lt;cardId&gt;:sha-limit", kind: "modify-limit", subject: "sha-use-count", effect: { delta: 3 }, lifecycle: "while-zone", whileCardId: 72, whileZone: "equip:0" });
+model.observeChoiceSet({ key: "rule:&lt;identity&gt;:prompt:&lt;id&gt;", domain: "effective-card-identity", candidates: [101, 102, 103], exactSelections: 1, visibility: "holder-only" });
+model.observeApparentCardAttributes({ cardId: 72, scope: "guessing-disguise", attributes: { name: "闪" }, observerSeats: [0, 2], whileChoiceSetKey: "rule:&lt;identity&gt;:prompt:&lt;id&gt;" });
+model.apparentCard(72, { scope: "guessing-disguise", observerSeat: 0 }); // 不改变 effectiveCard
+model.resolveChoiceSet({ key: "rule:&lt;identity&gt;:prompt:&lt;id&gt;", selectedIndex: 1 }); // 只记录选择，不移动实体牌
+model.observeSkillBinding({ skillId: 21134, ownerSeat: 0, derivedFromSkillId: 21132, ruleIdentityKey: "sgs-web-h5:21134:owner:0" });
+model.activeSkillBindings({ skillId: 21134, ownerSeat: 0 });
+model.activeRuleModifiers({ subject: "sha-use-count", ownerSeat: 0 });
+model.observeDeckRanks({ rank: 3, cardId: 72 });
+model.insertAtRank({ cardId: 72, rank: 6, fallback: "bottom" });
+model.tagCard({ cardId: 72, tag: "example" });
+runtime.tracker.skillResearchCoverage();
+runtime.tracker.skillKnowledgeFor(816);
+runtime.tracker.applyResolvedSkillOperation(816, resolvedOperation);</code></pre>
+        <p>当前仍缺少把所有技能触发、选择、零结果反馈、稀疏位置、时序标签和规则 IR 自动绑定到对应协议，以及重连既有牌局时对弃牌堆与处理区的完整重建。现有入口只能接收已验证事实，不能把技能文本直接当成服务器事件。3031 条技能完成逐条语义审阅和运行时冲突复核前，不会宣称全部技能已经建模。</p>
+
+        <h3>SGS Blocker</h3>
+        <p>提供“屏蔽广告 / 屏蔽特效 / 屏蔽道具弹窗”三个独立开关。每项只操作已核对的当前 Laya 路径，不按宽泛类名隐藏节点，也不全局关闭 Tween、Timer、Animation 或渲染。</p>
+        <div class="api-table-wrap"><table>
+          <thead><tr><th>开关</th><th>作用范围</th></tr></thead>
+          <tbody>
+            <tr><td>屏蔽广告</td><td>阻止 <code>ModeScene.showAdView</code>、隐藏当前广告视图、过滤类型 <code>0x27cb</code> 的军典入口，并通过公开关闭方法处理 <code>AdPushWindow</code>。</td></tr>
+            <tr><td>屏蔽特效</td><td>在 <code>XMLHttpRequest.open</code> 中只替换已确认的特效资源模式；保留铁索/酒白名单和两个已确认的结束回调路径。</td></tr>
+            <tr><td>屏蔽道具弹窗</td><td>处理 <code>GetPropSpecialWindow</code>、<code>GeneralOpenResultWindow</code>、<code>SkinOpenResultWindowNew</code>、<code>OldbackOneClickDrawAwdWin</code> 和 <code>TianShuWindow type=6</code>。</td></tr>
+          </tbody>
+        </table></div>
+        <p>禁用、更新、删除 Blocker 或热替换 Core 时，每个 Hook 都恢复包装前的方法。</p>
+
+        <h3>SGS DebugTools</h3>
+        <p>无配置项。插件显示名为 DebugTools，但为使已安装的旧插件原位更新，ID 仍是 <code>sgs.automation</code>。它通过 <code>plugins.invokeAction()</code> 暴露四个调试函数；相同函数的并发调用复用同一 Promise。</p>
+        <div class="api-table-wrap"><table>
+          <thead><tr><th>函数</th><th>目标与结果</th></tr></thead>
+          <tbody>
+            <tr><td><code>openRogueMap</code></td><td>查找 <code>modeId=151</code> 并打开山河图；目标 Scene 已显示时返回 <code>already-open</code>。</td></tr>
+            <tr><td><code>openGeneralTrial</code></td><td>查找 <code>modeId=147</code> 并打开武将试炼；试炼 Scene 或挑战窗口已显示时返回 <code>already-open</code>。</td></tr>
+            <tr><td><code>getCharacterInfo</code></td><td>返回自己角色的 ID、昵称、等级/经验、元宝、绑定元宝、银两、在线时长、VIP、官阶、公会等白名单字段，不打开资料窗口。</td></tr>
+            <tr><td><code>claimDailyTaskRewards</code></td><td>离屏循环领取 <code>CanAward</code> 的每日任务，再处理运行时提供的累计次数奖励；不假定任务数量，也不打开任务栏。</td></tr>
+          </tbody>
+        </table></div>
+        <pre><code>const invokeDebug = (action) =&gt; SgsFramework.plugins.invokeAction(
+  "sgs.automation", action
+);
+const rogue = await invokeDebug("openRogueMap");
+const trial = await invokeDebug("openGeneralTrial");
+const character = await invokeDebug("getCharacterInfo");
+const dailyTasks = await invokeDebug("claimDailyTaskRewards");</code></pre>
+        <p>函数返回 <code>ok</code>、<code>action</code>、<code>status</code> 与对应的前后状态。插件未启用时返回 <code>inactive</code>。模式入口不选择武将、不开始挑战、不确认弹窗，也不继续战斗。</p>
+
+        <h3>SGS AutoRewards</h3>
+        <p>插件启用后每秒读取一次运行时管理器公开的 <code>ServerTime</code>/<code>ServerDate</code>。首次取得 +8 服务器时钟时执行一次启动检查；服务器日期变化时执行一次跨日检查。检查按“卡类、免费将池、免费祈福、免费常山战鼓、官阶俸禄、签到、发财树”顺序串行，正在执行时不会并发重复，期间检测到的跨日会排队补跑。</p>
+        <div class="api-table-wrap"><table>
+          <thead><tr><th>项目</th><th>检查与领取规则</th></tr></thead>
+          <tbody>
+            <tr><td>月卡 / 周卡</td><td>先同步卡数据。启动检查只领取服务器状态标记可领的每日奖励和银两；跨日检查对仍有效的类型 3 月卡和类型 2 周卡各发送一次每日奖励及银两请求，以绕过跨日按钮状态未刷新的客户端问题。月卡随后独立领取全部满足条件的累计天数奖励；周卡没有累计路径。</td></tr>
+            <tr><td>免费将池</td><td>免费掉落 ID、免费 UI 标记、管理器免费状态与空闲请求池同时成立时，只用 <code>Free_MianFei_Draw</code> 抽取一次。</td></tr>
+            <tr><td>免费祈福</td><td>先同步全部轮次；只对 <code>freeOpen</code>、活动时间、抽取时间与 <code>CanFreeBless</code> 同时成立的轮次发送 <code>count=1</code>。</td></tr>
+            <tr><td>免费擂鼓</td><td>已加入公会且 <code>CanDrum</code> 时，重复常山战鼓的免费请求，直到 <code>LeftFreeDrumTimes</code> 为零或一次请求未确认。该项没有独立开关。</td></tr>
+            <tr><td>官阶俸禄</td><td>分别判断、领取并确认每日俸禄与每周俸禄；其中一项不存在不影响另一项。</td></tr>
+            <tr><td>签到</td><td>只处理正常免费签到状态；补签状态不点击。每日签到后或已签到时都检查累计签到奖励。试用武将按签到策略跳过；“月底领”只在 +8 服务器日历当月最后一天放行。</td></tr>
+            <tr><td>发财树</td><td>可砍时发送一次砍树请求；免费奖励物品存在且没有必须处理的树事件时再领奖。跨日时即使客户端仍缓存“已领”状态也会尝试一次砍树；启动时相信重登后状态。</td></tr>
+          </tbody>
+        </table></div>
+        <p>插件提供六个 Toggle 与一个签到策略下拉列表，默认开启全部 Toggle，并默认“自动签到-跳过试用”；第三项按界面显示为“自动签到-跳过使用-月底领”。AutoRewards 不暴露手动领奖 Action；配置变更影响下一次启动/跨日自动检查。禁用插件会停止服务器时钟监听并取消后续等待。</p>
+      </section>
+
+      <section id="risk" data-title="权限 风险 CORS 沙箱 开发者模式 Game Model 手牌 CardID 推理 DebugTools AutoRewards 自动领奖 月卡 周卡 免费抽取 签到 试用武将 发财树 购买 续费">
+        <h2>权限与边界</h2>
+        <p>插件权限是安装前披露，不是能力沙箱，也不会按权限名阻止执行。插件与页面脚本处于同一环境，可以读取运行时对象、调用公开方法、发出真实游戏请求或创建 DOM。只安装可信来源，并审查声明网络、Hook、Laya、游戏请求或 DOM 能力的代码。</p>
+        <p>开发者模式只是插件可读取的布尔信号，不授予权限、不隔离 Debug 代码，也不改变生命周期。使用该信号的插件必须自己在关闭时清理开发专用 Hook、监听器、定时器和 DOM，并把最终清理交给 Disposer。</p>
+        <p>Game Model 是无 UI 只读推理插件，不发送出牌、选牌或技能操作。它记录页面运行时实际包含的具体 CardID，并为敌方手牌区分公开/授权与原始服务器暴露来源；服务器未下发的牌仍是未知数量。概率结论会标注牌堆定义、物理数量、已知区域和交换性假设，未确认规则保留为开放问题。</p>
+        <p>Game Model 不把技能 Taxonomy 的 <code>complete=true</code> 当作机制完成。配置文本、语义研究、可执行规则与运行时证据独立统计；冲突不会被静默覆盖。插件不声明 <code>browser.fetch</code>、<code>browser.local-storage</code> 或 <code>browser.dom-overlay</code>，不为加载自身 runtime 发出网络请求，也不创建牌局 UI。</p>
+        <p>Blocker 只使用具体、可恢复且经过运行时核对的路径。DebugTools 的模式入口会改变当前界面，但只调用活动场分页和模式入口；不选择武将、不开始挑战、不确认弹窗，也不调用购买路径。入口条件不成立时返回结构化失败。</p>
+        <p>DebugTools 的 <code>getCharacterInfo</code> 只读取当前 Stage 中 <code>IsSelf=true</code> 的角色对象，并构造白名单结果。它不返回原始对象、Session、重连 Token、二级密码、账号散列或登录 IP；对象不可用时不打开资料窗口或发出资料查询。<code>claimDailyTaskRewards</code> 会发出真实领奖请求，但只处理每日且 <code>CanAward</code> 的任务和运行时累计奖励数组，不以固定任务数量判断正确性，也不把任务 View 加入 Stage。</p>
+        <p>AutoRewards 启用后会在首次取得服务器时间和每次 +8 服务器日期变化时发出真实请求。跨日卡类流程有意忽略客户端每日/银两按钮的本地可领标记：只要卡仍有效，就对月卡和周卡各发送一次对应请求；服务器仍负责最终资格校验。启动检查会先同步状态并避免对已领取卡奖励重复请求。月卡累计奖励始终按运行时的可领/已领数组逐项判断。</p>
+        <p>AutoRewards 不调用月卡/周卡购买或续费方法。武将抽取必须同时满足免费掉落 ID、免费 UI、管理器免费状态和请求空闲，并只使用 <code>Free_MianFei_Draw</code>；祈福必须通过免费配置与时间检查，只发送 <code>count=1</code>。两者均不调用付费抽取、灯购买、道具购买或元宝补足路径。</p>
+        <p>免费擂鼓只调用常山战鼓的 <code>SendGuildDonate()</code>，不调用亮银槌、鎏金锤、背包道具、<code>SendGuildDrumUse()</code> 或元宝确认。官阶只调用资格为真的每日/每周俸禄接口，不升级官阶，也不领取其他官阶活动奖励。</p>
+        <p>签到只在普通免费状态执行，补签状态不会点击，因此不会发起补签消耗。试用武将由 <code>IsTryGeneralSkin</code> 判定；跳过策略不会污染将池，“月底领”会在服务器当月最后一天放行该奖励。累计签到奖励仍会独立处理。</p>
+        <p>发财树只在免费奖励物品就绪时领奖，不购买物品。存在 <code>HasTriggerEvent</code> 时返回 <code>event-required</code>，不会自动打开、跳过或伪造事件窗口；该次可能需要用户手动处理后等待下一次自动检查。跨日的强制砍树请求只用于绕过客户端缓存的昨日状态，服务器仍负责资格校验。</p>
+        <p>AutoRewards 使用串行队列避免并发重复；禁用、更新、删除插件或热替换 Core 时停止时钟监听、取消等待并销毁离屏对象。已送达服务器的请求无法撤回，但清理后不会继续下一轮请求。DebugTools 停止后 Action 返回 <code>inactive</code>。</p>
+        <p>浏览器 Fetch 受 CORS 约束。第三方插件与 Catalog 来源需要允许游戏页面跨域访问；Header 更新模式还要显式暴露版本响应头。</p>
+        <p>官方发布器只上传本地 <code>dist</code>，并在同步后从公开 URL 下载每个 JavaScript 核对 SHA-256。发布使用显式命令，不运行常驻文件监视器；读写 Oracle 的权限不进入浏览器产物。</p>
+      </section>
+
+      <p id="no-results" hidden>没有匹配的章节。</p>
+    </article>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "sgs-web-script-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Engineering workspace for SGS Framework, userscript and plugins.",
+  "scripts": {
+    "build": "node build/build.mjs",
+    "publish:check": "node build/publish.mjs --dry-run",
+    "deploy": "npm run build && node build/publish.mjs --deploy",
+    "check": "node build/check.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.6",
+    "terser": "^5.43.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

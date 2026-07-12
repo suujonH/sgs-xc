@@ -1,0 +1,21 @@
+{
+  "name": "SGS Framework Official",
+  "plugins": [
+    {
+      "id": "sgs.card-tracker",
+      "url": "https://sgs.senrax.com/script/plugin/card-tracker.mjs"
+    },
+    {
+      "id": "sgs.blocker",
+      "url": "https://sgs.senrax.com/script/plugin/blocker.mjs"
+    },
+    {
+      "id": "sgs.automation",
+      "url": "https://sgs.senrax.com/script/plugin/automation.mjs"
+    },
+    {
+      "id": "sgs.auto-rewards",
+      "url": "https://sgs.senrax.com/script/plugin/auto-rewards.mjs"
+    }
+  ]
+}

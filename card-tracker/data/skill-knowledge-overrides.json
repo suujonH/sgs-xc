@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "skills": {
+    "816": {
+      "reviewStatus": "researched",
+      "confidence": "high",
+      "mechanicSummary": "所有由技能拥有者执行的摸牌操作改从牌堆底取得；判定、检索、展示和其他牌堆操作不受影响。",
+      "executableRuleStatus": "implemented-in-core",
+      "rule": {
+        "trigger": { "event": "draw", "actor": "skill-owner" },
+        "operations": [
+          {
+            "type": "draw",
+            "source": "deck",
+            "selector": "bottom",
+            "count": "event.count",
+            "destination": "event.destination"
+          }
+        ],
+        "doesNotApplyTo": ["judgement", "deck-search", "deck-reveal", "deck-put"]
+      },
+      "sources": [
+        { "kind": "current-config", "path": "Config_w.sgs/cha_spell", "note": "skill 816 current text" },
+        { "kind": "official", "url": "https://www.sanguosha.com/hero/406", "note": "许攸技能资料" },
+        { "kind": "rules", "url": "https://gltjk.com/sanguosha/rules/glossary/gamecard.html", "note": "判定默认使用牌堆顶" }
+      ],
+      "openQuestions": []
+    },
+    "3515": {
+      "reviewStatus": "researched",
+      "confidence": "high",
+      "mechanicSummary": "封赏候选是当前仍位于弃牌堆、并且在本回合进入弃牌堆的牌；洗牌会清空当前弃牌堆候选，但同回合洗牌后新进入弃牌堆的牌可重新成为候选。",
+      "executableRuleStatus": "query-implemented-in-core",
+      "rule": {
+        "trigger": { "event": ["play-phase-use", "character-dying"], "limits": "skill-defined" },
+        "candidateQuery": {
+          "zone": "discard",
+          "enteredTurn": "current-turn",
+          "currentEpoch": true,
+          "groupBy": "suit"
+        },
+        "operations": [
+          { "type": "move", "source": "discard", "destination": "selected-players-hand", "identity": "server-selected-card-ids" }
+        ]
+      },
+      "sources": [
+        { "kind": "current-config", "path": "Config_w.sgs/cha_spell", "note": "skill 3515 current text" },
+        { "kind": "official", "url": "https://www.sanguosha.com/hero/605", "note": "谋董卓技能资料" },
+        { "kind": "community-observation", "url": "https://www.taptap.cn/moment/623709156045491963", "note": "洗牌重置弃牌堆会减少封赏候选" },
+        { "kind": "current-client", "path": "sgsGame_a.sgs/sgsGame_a.js", "note": "WatchCardIds and discard-to-hand request" }
+      ],
+      "openQuestions": []
+    },
+    "3697": {
+      "reviewStatus": "researched",
+      "confidence": "medium-high",
+      "mechanicSummary": "浑天仪离开装备区后，从当前牌堆随机检索两张与该装备点数相同的锦囊牌；没有匹配牌时无事发生，并形成当前洗牌周期内的强负证据。",
+      "executableRuleStatus": "partial-open-question",
+      "rule": {
+        "trigger": { "event": "card-leaves-equip", "cardSkillId": 3697 },
+        "operations": [
+          {
+            "type": "search",
+            "source": "deck",
+            "selector": "random-predicate",
+            "predicate": { "type": "trick", "number": "trigger.card.number" },
+            "count": 2,
+            "destination": "skill-owner-hand",
+            "onZero": "no-move-and-add-epoch-negative-evidence",
+            "onOne": "unconfirmed"
+          }
+        ]
+      },
+      "sources": [
+        { "kind": "current-config", "path": "Config_w.sgs/cha_spell", "note": "skill 3697 current text" },
+        { "kind": "guide", "url": "https://bbs.4399.cn/thread-view-tid-50218137", "note": "牌堆无对应锦囊时检索无事发生" },
+        { "kind": "official", "url": "https://www.sanguosha.com/hero/704", "note": "族陆绩与浑天仪资料" }
+      ],
+      "openQuestions": [
+        "当前牌堆恰好只剩一张满足条件的牌时，是获得一张还是整体不执行，需要协议样本确认。"
+      ]
+    }
+  }
+}

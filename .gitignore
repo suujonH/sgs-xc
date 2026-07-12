@@ -1,0 +1,28 @@
+# Dependencies and generated build output
+node_modules/
+**/node_modules/
+.build/
+**/.build/
+dist/
+**/dist/
+coverage/
+**/coverage/
+*.tsbuildinfo
+
+# Local review, audit and runtime evidence
+card-tracker/reports/
+card-tracker/data/skill-reviews/
+card-tracker/captures/
+card-tracker/recordings/
+**/review/
+**/reviews/
+*.log
+
+# Machine-specific deployment configuration
+build/deploy.config.local.json
+
+# Editor and operating-system state
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

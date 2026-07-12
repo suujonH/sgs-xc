@@ -1,0 +1,13 @@
+{
+  "remoteHost": "your-ssh-host-alias",
+  "remotePath": "/path/to/web/script",
+  "publicBaseUrl": "https://example.invalid/script/",
+  "remoteOwner": "remote-user:remote-group",
+  "acl": {
+    "user": "web-server-user",
+    "traversePaths": [
+      "/path/to/web",
+      "/path/to/web/script"
+    ]
+  }
+}

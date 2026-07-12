@@ -1,0 +1,39 @@
+{
+  "name": "sgs-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "CDP/Laya runtime scripts for SGS inspection and the headless game inference model.",
+  "scripts": {
+    "build:runtime": "node scripts/build-runtime.mjs",
+    "chrome": "node src/node/cli.mjs chrome",
+    "install:tracker": "node src/node/cli.mjs install",
+    "status": "node src/node/cli.mjs status",
+    "snapshot": "node src/node/cli.mjs snapshot",
+    "capture": "node src/node/cli.mjs capture",
+    "monitor": "node src/node/cli.mjs monitor",
+    "record": "node src/node/cli.mjs record",
+    "recording-report": "node src/node/cli.mjs recording-report",
+    "recording-timeline": "node src/node/cli.mjs recording-timeline",
+    "order-source-coverage": "node src/node/cli.mjs order-source-coverage",
+    "validate": "node src/node/cli.mjs validate",
+    "source-report": "node src/node/cli.mjs source-report",
+    "public-zone-report": "node src/node/cli.mjs public-zone-report",
+    "protocol-flow-report": "node src/node/cli.mjs protocol-flow-report",
+    "audit:skills": "node src/node/tools/audit-skills.mjs",
+    "skill-rule-worklist": "node src/node/tools/skill-rule-worklist.mjs",
+    "skill-review-evidence": "node src/node/tools/skill-review-evidence.mjs",
+    "skill-knowledge": "node src/node/tools/build-skill-knowledge-base.mjs",
+    "smoke:model": "node src/node/tools/runtime-model-smoke.mjs",
+    "stop": "node src/node/cli.mjs stop",
+    "check": "node --check scripts/build-runtime.mjs && node --check src/node/cli.mjs && node --check src/node/commands/capture-artifacts.mjs && node --check src/node/commands/game-record-upload.mjs && node --check src/node/commands/recording-session.mjs && node --check src/node/commands/recording-report.mjs && node --check src/node/commands/recording-timeline.mjs && node --check src/node/commands/order-source-coverage.mjs && node --check src/node/commands/report-commands.mjs && node --check src/node/commands/runtime-session.mjs && node --check src/node/commands/user-credentials.mjs && node --check src/node/cdp/client.mjs && node --check src/node/tools/audit-skills.mjs && node --check src/node/tools/skill-rule-worklist.mjs && node --check src/node/tools/skill-review-evidence.mjs && node --check src/node/tools/build-skill-knowledge-base.mjs && node --check src/node/tools/validate-skill-review-batch.mjs && node --check src/node/tools/runtime-model-smoke.mjs && node --check src/node/validation/snapshot-validator.cjs && node --check src/node/analysis/hand-source-report.cjs && node --check src/node/analysis/public-zone-report.cjs && node --check src/node/analysis/protocol-flow-report.cjs && node --check src/node/analysis/recording-report.cjs && node --check src/node/analysis/recording-timeline.cjs && node --check src/node/analysis/order-source-coverage.cjs && node --check src/node/analysis/skill-audit-report.cjs && node --check src/node/analysis/skill-rule-matrix.cjs && node --check src/node/analysis/skill-rule-worklist.cjs && node --check src/runtime/sources/config-table-core.cjs && node --check src/runtime/sources/protocol-normalizer-core.cjs && node --check src/runtime/sources/public-zone-core.cjs && node --check src/runtime/sources/mask-hand-core.cjs && node --check src/runtime/sources/recording-storage.js && node --check src/runtime/model/game-model-core.cjs && node --check src/runtime/model/game-model.js && node --check src/runtime/tracker/candidate-rule-core.cjs && node --check src/runtime/tracker/order-source-rule-core.cjs && node --check src/runtime/tracker/known-hand-ledger-core.cjs && node --check src/runtime/tracker/protocol-zone-ledger-core.cjs && node --check src/runtime/tracker/protocol-zone-ledger.js && node --check src/runtime/tracker/rule-planner-core.cjs && node --check src/runtime/tracker/skill-rule-core.cjs && node --check src/runtime/tracker/fact-store.js",
+    "test:unit": "node --test",
+    "test": "npm run check && npm run test:unit"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

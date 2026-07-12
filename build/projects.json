@@ -1,0 +1,39 @@
+[
+  {
+    "id": "downloader",
+    "kind": "userscript",
+    "entry": "downloader/src/download.user.js",
+    "output": "download.mjs"
+  },
+  {
+    "id": "framework",
+    "kind": "core",
+    "entry": "framework/src/core.js",
+    "output": "core.mjs"
+  },
+  {
+    "id": "card-tracker",
+    "kind": "embedded-runtime-plugin",
+    "entry": "card-tracker/plugin/src/plugin.js",
+    "runtime": "card-tracker/dist/sgs-runtime.js",
+    "output": "plugin/card-tracker.mjs"
+  },
+  {
+    "id": "auto-rewards",
+    "kind": "plugin",
+    "entry": "auto-rewards/src/plugin.js",
+    "output": "plugin/auto-rewards.mjs"
+  },
+  {
+    "id": "debug-tools",
+    "kind": "plugin",
+    "entry": "debug-tools/src/plugin.js",
+    "output": "plugin/automation.mjs"
+  },
+  {
+    "id": "blocker",
+    "kind": "plugin",
+    "entry": "blocker/src/plugin.js",
+    "output": "plugin/blocker.mjs"
+  }
+]
